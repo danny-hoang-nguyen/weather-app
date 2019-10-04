@@ -8,6 +8,7 @@ import com.oddle.app.weatherApp.exception.LogNotFoundException;
 import com.oddle.app.weatherApp.model.WeatherLog;
 import com.oddle.app.weatherApp.model.WeatherLogResponse;
 import com.oddle.app.weatherApp.service.DateValidator;
+import com.oddle.app.weatherApp.service.RestService;
 import com.oddle.app.weatherApp.service.WeatherLogService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -82,12 +83,8 @@ public class WeatherLogServiceImpl implements WeatherLogService {
     @Autowired
     private DateValidator dateValidator;
 
-    @Bean
-    public RestTemplate restTemplate() {
-        return new RestTemplate();
-    }
-
-    private static final String urlBase = "http://api.openweathermap.org/data/2.5/weather";
+    @Autowired
+    private RestService restService;
 
     public void deleteSavedLog(Long id) {
         if (findWeatherLogById(id) != null) {
@@ -101,15 +98,13 @@ public class WeatherLogServiceImpl implements WeatherLogService {
         long timeStampSeconds = instant.getEpochSecond();
         WeatherLogEntity weatherLogById = findWeatherLogById(id);
         if (weatherLogById != null) {
-            if (timeStampSeconds - weatherLogById.getWDate() < ONE_DAY_IN_SEC) {
-                WeatherLogEntity temp = fromModel(weatherLog);
-                temp.setId(id);
-                logRepository.save(temp);
-                return fromEntity(logRepository.findById(id).get());
-            } else {
+            if (timeStampSeconds - weatherLogById.getWDate() >= ONE_DAY_IN_SEC) {
                 throw new GeneralException("Cannot edit log older than 1 day from: " + weatherLogById.getLogDate() + " to current time: " + convertMiliToDateTime(timeStampSeconds));
             }
-
+            WeatherLogEntity temp = fromModel(weatherLog);
+            temp.setId(id);
+            logRepository.save(temp);
+            return fromEntity(logRepository.findById(id).get());
         }
         return null;
     }
@@ -149,35 +144,12 @@ public class WeatherLogServiceImpl implements WeatherLogService {
 
         Map<String, String> param = new HashMap<>();
         param.put("q", name);
-        String response = callRestToGetLog(param);
+        String response = restService.callRestToGetLog(param);
         WeatherLogEntity weatherLogEntity = saveLatestLog(response);
         return fromEntity(weatherLogEntity);
 
     }
 
-    private String callRestToGetLog(Map<String, String> param) {
-        String retrievedLog = "";
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
-
-        URI url = buildUri(param).buildAndExpand().toUri();
-        try {
-            retrievedLog = restTemplate().getForObject(url, String.class);
-        } catch (HttpClientErrorException e) {
-            throw new LogNotFoundException(e.getResponseBodyAsString());
-        }
-
-        return retrievedLog;
-    }
-
-    private UriComponentsBuilder buildUri(Map<String, String> queryParam) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(urlBase);
-        queryParam.forEach((s, s2) -> builder.queryParam(s, s2));
-
-        builder.queryParam("appid", appId);
-        return builder;
-
-    }
 
     public WeatherLogEntity saveLatestLog(String input) {
         Gson gson = new Gson();
@@ -197,8 +169,6 @@ public class WeatherLogServiceImpl implements WeatherLogService {
             wEntity.setTempC(convertKtoC(weatherLogResponse.getMain().getTemp()));
             wEntity.setWMainType(e.getMain());
             wEntity.setWIcon(e.getIcon());
-            wEntity.setWMainType(e.getMain());
-            wEntity.setWMainType(e.getMain());
             wEntity.setWString(input);
             logRepository.save(wEntity);
         });

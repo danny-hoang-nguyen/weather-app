@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.HttpClientErrorException;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -19,7 +20,12 @@ public class WeatherInfoController {
     @RequestMapping(value = {"/fetch-log"}, method = RequestMethod.GET)
     public ResponseEntity<?> fetchLatestLogByCity(
             @RequestParam(value = "cityName") String cityName) {
-        WeatherLog log = service.fetchLog(cityName);
+        WeatherLog log = null;
+        try {
+            log = service.fetchLog(cityName);
+        } catch (HttpClientErrorException e) {
+            return new ResponseEntity<>(new LogNotFoundException("Cannot get city: " + cityName + ". Detail: " + e.getResponseBodyAsString()), HttpStatus.NOT_FOUND);
+        }
         return new ResponseEntity<>(log, HttpStatus.OK);
     }
 

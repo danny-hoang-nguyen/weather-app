@@ -7,14 +7,17 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
-import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -53,16 +56,22 @@ public class WeatherInfoControllerTest {
     public void givenWrongCityName_whenFetchLogByCityName_thenReturnNotFound()
             throws Exception {
 
-        WeatherLog weatherLog = null;
+        String s = "{\n" +
+                "    \"cod\": \"404\",\n" +
+                "    \"message\": \"city not found\"\n" +
+                "}";
+        byte[] bytes = s.getBytes();
 
+        HttpClientErrorException httpClientErrorException = new HttpClientErrorException(HttpStatus.NOT_FOUND, null, bytes, null);
 
-//        given(service.fetchLog("Hanoi123")).willReturn(null);
+        given(service.fetchLog("Hanoi123")).willThrow(httpClientErrorException);
 
         MvcResult mvcResult = mvc.perform(get("/fetch-log").param("cityName", "Hanoi123").accept(MediaType.APPLICATION_JSON_VALUE)).andReturn();
-        System.out.println(mvcResult.getResponse().getStatus());
-//                .contentType(MediaType.APPLICATION_JSON))
-//                .andExpect(status().isNotFound())
-//                .andExpect(jsonPath("$.message", is("{\"cod\":\"404\",\"message\":\"city not found\"}")));
+        assertEquals(404, mvcResult.getResponse().getStatus());
+        String contentAsString = mvcResult.getResponse().getContentAsString();
+        assertTrue(contentAsString.contains("city not found"));
+        assertTrue(contentAsString.contains("Cannot get city: Hanoi123."));
+
     }
 
 }
