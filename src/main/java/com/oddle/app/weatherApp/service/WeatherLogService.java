@@ -10,6 +10,8 @@ public interface WeatherLogService {
 
     WeatherLog fetchLog(String cityName);
 
+    WeatherLog getLogById(Long id);
+
     WeatherLog updateSavedLog(Long id, WeatherLog weatherLog);
 
     void deleteSavedLog(Long id);

@@ -39,6 +39,15 @@ public class WeatherInfoController {
         return new ResponseEntity<>(service.retrieveLogs(cityName, date, pageOrder, count), HttpStatus.OK);
     }
 
+    @RequestMapping(value = {"/weather-logs/{id}"}, method = RequestMethod.GET)
+    public ResponseEntity<?> getWeatherLogById(@PathVariable("id") Long id) {
+        WeatherLog log = service.getLogById(id);
+        if (log == null) {
+            throw new LogNotFoundException("id: " + id + " does not exist");
+        }
+        return ResponseEntity.ok(log);
+    }
+
     @RequestMapping(value = {"/weather-logs/{id}"}, method = RequestMethod.PUT)
     public ResponseEntity<?> updateWeatherLog(@PathVariable("id") Long id, @RequestBody WeatherLog weatherLog) {
         WeatherLog log = service.updateSavedLog(id, weatherLog);

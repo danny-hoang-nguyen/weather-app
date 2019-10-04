@@ -81,16 +81,16 @@ public class WeatherLogServiceImpl implements WeatherLogService {
     private RestService restService;
 
     public void deleteSavedLog(Long id) {
-        if (findWeatherLogById(id) != null) {
+        if (getLogById(id) != null) {
             logRepository.deleteById(id);
-        } else throw new LogNotFoundException("id: " + id + " does not exist!");
+        } else throw new LogNotFoundException("id: " + id + " does not exist");
     }
 
     public WeatherLog updateSavedLog(Long id, WeatherLog weatherLog) {
         Instant instant = Instant.now();
 
         long timeStampSeconds = instant.getEpochSecond();
-        WeatherLogEntity weatherLogById = findWeatherLogById(id);
+        WeatherLog weatherLogById = getLogById(id);
         if (weatherLogById != null) {
             if (timeStampSeconds - weatherLogById.getWDate() >= ONE_DAY_IN_SEC) {
                 throw new GeneralException("Cannot edit log older than 1 day from: " + weatherLogById.getLogDate() + " to current time: " + convertMiliToDateTime(timeStampSeconds));
@@ -103,10 +103,10 @@ public class WeatherLogServiceImpl implements WeatherLogService {
         return null;
     }
 
-    public WeatherLogEntity findWeatherLogById(Long id) {
+    public WeatherLog getLogById(Long id) {
         Optional<WeatherLogEntity> weatherLogEntity = logRepository.findById(id);
         if (weatherLogEntity.isPresent()) {
-            return weatherLogEntity.get();
+            return fromEntity(weatherLogEntity.get());
         }
         return null;
     }
@@ -143,6 +143,7 @@ public class WeatherLogServiceImpl implements WeatherLogService {
         return fromEntity(weatherLogEntity);
 
     }
+
 
 
     public WeatherLogEntity saveLatestLog(String input) {
