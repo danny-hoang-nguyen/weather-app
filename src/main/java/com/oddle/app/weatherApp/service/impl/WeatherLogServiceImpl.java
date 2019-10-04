@@ -10,14 +10,18 @@ import com.oddle.app.weatherApp.model.WeatherLogResponse;
 import com.oddle.app.weatherApp.service.DateValidator;
 import com.oddle.app.weatherApp.service.WeatherLogService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
@@ -26,6 +30,14 @@ import java.util.stream.Collectors;
 
 @Service
 public class WeatherLogServiceImpl implements WeatherLogService {
+
+    public static final int DEFAULT_PAGE = 0;
+    public static final int DEFAULT_PAGE_SIZE = 100;
+    public static final int ONE_DAY_IN_SEC = 86400;
+
+    @Value("${appId}")
+    private String appId;
+
 
     public WeatherLog fromEntity(WeatherLogEntity wLogEntity) {
         return WeatherLog.builder()
@@ -89,7 +101,7 @@ public class WeatherLogServiceImpl implements WeatherLogService {
         long timeStampSeconds = instant.getEpochSecond();
         WeatherLogEntity weatherLogById = findWeatherLogById(id);
         if (weatherLogById != null) {
-            if (timeStampSeconds - weatherLogById.getWDate() < 86400) {
+            if (timeStampSeconds - weatherLogById.getWDate() < ONE_DAY_IN_SEC) {
                 WeatherLogEntity temp = fromModel(weatherLog);
                 temp.setId(id);
                 logRepository.save(temp);
@@ -114,17 +126,17 @@ public class WeatherLogServiceImpl implements WeatherLogService {
         Pageable pageable;
         List<WeatherLog> result = Collections.emptyList();
         if (pageOrder != null && count != null) {
-            pageable = PageRequest.of(pageOrder, count);
+            pageable = PageRequest.of(pageOrder, count, Sort.by("wDate").descending());
         } else {
-            //TODO extract default page to constant
-            pageable = PageRequest.of(0, 100);
+            pageable = PageRequest.of(DEFAULT_PAGE, DEFAULT_PAGE_SIZE, Sort.by("wDate").descending());
         }
 
         if (cityName == null && date == null) {
             result = logRepository.findAll(pageable).stream()
                     .map(weatherLogEntity -> fromEntity(weatherLogEntity)).collect(Collectors.toList());
         } else if (cityName != null && date != null) {
-            if(!dateValidator.isValid(date)) throw new GeneralException("Date is invalid format. Please use yyyy-mm-dd format.");
+            if (!dateValidator.isValid(date))
+                throw new GeneralException("Date is invalid format. Please use yyyy-mm-dd format.");
             result = logRepository.findAllByCityNameAndLogDate(cityName, date, pageable).stream()
                     .map(weatherLogEntity -> fromEntity(weatherLogEntity)).collect(Collectors.toList());
         }
@@ -137,31 +149,32 @@ public class WeatherLogServiceImpl implements WeatherLogService {
 
         Map<String, String> param = new HashMap<>();
         param.put("q", name);
-        ResponseEntity<String> response = callRestToGetLog(param);
-        if (response != null) {
-            WeatherLogEntity weatherLogEntity = saveLatestLog(response.getBody());
-            return fromEntity(weatherLogEntity);
-        }
-        return null;
+        String response = callRestToGetLog(param);
+        WeatherLogEntity weatherLogEntity = saveLatestLog(response);
+        return fromEntity(weatherLogEntity);
+
     }
 
-    private ResponseEntity<String> callRestToGetLog(Map<String, String> param) {
-        ResponseEntity<String> exchange;
+    private String callRestToGetLog(Map<String, String> param) {
+        String retrievedLog = "";
         HttpHeaders headers = new HttpHeaders();
-        headers.setAccept(Arrays.asList(new MediaType[]{MediaType.APPLICATION_JSON}));
-        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
 
-        HttpEntity<String> entity = new HttpEntity<>(headers);
-        String url = buildUri(param).toUriString();
-        exchange = restTemplate().exchange(url, HttpMethod.GET, entity, String.class);
-        return exchange;
+        URI url = buildUri(param).buildAndExpand().toUri();
+        try {
+            retrievedLog = restTemplate().getForObject(url, String.class);
+        } catch (HttpClientErrorException e) {
+            throw new LogNotFoundException(e.getResponseBodyAsString());
+        }
+
+        return retrievedLog;
     }
 
     private UriComponentsBuilder buildUri(Map<String, String> queryParam) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(urlBase);
         queryParam.forEach((s, s2) -> builder.queryParam(s, s2));
 
-        builder.queryParam("appid", "3073ae0677aafab9bba80aefe29a3d1e");
+        builder.queryParam("appid", appId);
         return builder;
 
     }

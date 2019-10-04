@@ -1,7 +1,6 @@
 package com.oddle.app.weatherApp.model;
 
 
-import com.oddle.app.weatherApp.entity.WeatherLogEntity;
 import lombok.*;
 
 import java.io.Serializable;
@@ -10,10 +9,13 @@ import java.io.Serializable;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@EqualsAndHashCode
 @ToString
+@EqualsAndHashCode
 @Builder
 public class WeatherLog implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
     private Long id;
     private String cityName;
     private Long cityId;

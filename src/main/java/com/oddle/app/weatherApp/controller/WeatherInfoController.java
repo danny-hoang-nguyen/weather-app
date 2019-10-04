@@ -16,18 +16,10 @@ public class WeatherInfoController {
     @Autowired
     private WeatherLogService service;
 
-    @RequestMapping(value = {"/test"}, method = RequestMethod.GET)
-    public String testController() {
-        return "this is the test controller";
-    }
-
     @RequestMapping(value = {"/fetch-log"}, method = RequestMethod.GET)
     public ResponseEntity<?> fetchLatestLogByCity(
             @RequestParam(value = "cityName") String cityName) {
         WeatherLog log = service.fetchLog(cityName);
-        if (log == null) {
-            throw new LogNotFoundException("city name: " + cityName + " does not exist");
-        }
         return new ResponseEntity<>(log, HttpStatus.OK);
     }
 
@@ -38,13 +30,11 @@ public class WeatherInfoController {
             @RequestParam(value = "pageOrder", required = false) Integer pageOrder,
             @RequestParam(value = "itemCount", required = false) Integer count
     ) {
-        return new ResponseEntity<>(service.retrieveLogs(cityName,date,pageOrder, count), HttpStatus.OK);
+        return new ResponseEntity<>(service.retrieveLogs(cityName, date, pageOrder, count), HttpStatus.OK);
     }
 
     @RequestMapping(value = {"/weather-logs/{id}"}, method = RequestMethod.PUT)
     public ResponseEntity<?> updateWeatherLog(@PathVariable("id") Long id, @RequestBody WeatherLog weatherLog) {
-        // retrieve and check if within a date
-
         WeatherLog log = service.updateSavedLog(id, weatherLog);
         if (log == null) {
             throw new LogNotFoundException("id: " + id + " does not exist");
