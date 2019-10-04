@@ -16,7 +16,7 @@ public class LogNotFoundException extends RuntimeException {
     private String message;
 
     public LogNotFoundException(String message) {
-        super(message,null, false,false);
+        super(message, null, false, false);
         this.message = message;
     }
 }

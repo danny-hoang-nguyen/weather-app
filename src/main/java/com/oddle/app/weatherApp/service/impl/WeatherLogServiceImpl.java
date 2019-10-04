@@ -12,17 +12,11 @@ import com.oddle.app.weatherApp.service.RestService;
 import com.oddle.app.weatherApp.service.WeatherLogService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 
-import java.net.URI;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
@@ -101,9 +95,9 @@ public class WeatherLogServiceImpl implements WeatherLogService {
             if (timeStampSeconds - weatherLogById.getWDate() >= ONE_DAY_IN_SEC) {
                 throw new GeneralException("Cannot edit log older than 1 day from: " + weatherLogById.getLogDate() + " to current time: " + convertMiliToDateTime(timeStampSeconds));
             }
-            WeatherLogEntity temp = fromModel(weatherLog);
-            temp.setId(id);
-            logRepository.save(temp);
+            WeatherLogEntity weatherLogEntity = fromModel(weatherLog);
+            weatherLogEntity.setId(id);
+            logRepository.save(weatherLogEntity);
             return fromEntity(logRepository.findById(id).get());
         }
         return null;
