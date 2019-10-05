@@ -10,7 +10,7 @@ import java.text.SimpleDateFormat;
 @Service
 public class DateValidatorImpl implements DateValidator {
 
-    private static final String dateFormat="yyyy-MM-dd";
+    private static final String dateFormat = "yyyy-MM-dd";
 
 
     @Override

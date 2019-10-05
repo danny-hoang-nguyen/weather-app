@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.HttpClientErrorException;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -16,17 +17,14 @@ public class WeatherInfoController {
     @Autowired
     private WeatherLogService service;
 
-    @RequestMapping(value = {"/test"}, method = RequestMethod.GET)
-    public String testController() {
-        return "this is the test controller";
-    }
-
     @RequestMapping(value = {"/fetch-log"}, method = RequestMethod.GET)
     public ResponseEntity<?> fetchLatestLogByCity(
             @RequestParam(value = "cityName") String cityName) {
-        WeatherLog log = service.fetchLog(cityName);
-        if (log == null) {
-            throw new LogNotFoundException("city name: " + cityName + " does not exist");
+        WeatherLog log = null;
+        try {
+            log = service.fetchLog(cityName);
+        } catch (HttpClientErrorException e) {
+            return new ResponseEntity<>(new LogNotFoundException("Cannot get city: " + cityName + ". Detail: " + e.getResponseBodyAsString()), HttpStatus.NOT_FOUND);
         }
         return new ResponseEntity<>(log, HttpStatus.OK);
     }
@@ -38,13 +36,20 @@ public class WeatherInfoController {
             @RequestParam(value = "pageOrder", required = false) Integer pageOrder,
             @RequestParam(value = "itemCount", required = false) Integer count
     ) {
-        return new ResponseEntity<>(service.retrieveLogs(cityName,date,pageOrder, count), HttpStatus.OK);
+        return new ResponseEntity<>(service.retrieveLogs(cityName, date, pageOrder, count), HttpStatus.OK);
+    }
+
+    @RequestMapping(value = {"/weather-logs/{id}"}, method = RequestMethod.GET)
+    public ResponseEntity<?> getWeatherLogById(@PathVariable("id") Long id) {
+        WeatherLog log = service.getLogById(id);
+        if (log == null) {
+            throw new LogNotFoundException("id: " + id + " does not exist");
+        }
+        return ResponseEntity.ok(log);
     }
 
     @RequestMapping(value = {"/weather-logs/{id}"}, method = RequestMethod.PUT)
     public ResponseEntity<?> updateWeatherLog(@PathVariable("id") Long id, @RequestBody WeatherLog weatherLog) {
-        // retrieve and check if within a date
-
         WeatherLog log = service.updateSavedLog(id, weatherLog);
         if (log == null) {
             throw new LogNotFoundException("id: " + id + " does not exist");

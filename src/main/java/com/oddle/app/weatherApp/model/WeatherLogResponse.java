@@ -1,40 +1,20 @@
 package com.oddle.app.weatherApp.model;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
 import java.io.Serializable;
 import java.util.List;
 
 @Getter
 @Setter
+@ToString
+@EqualsAndHashCode
 public class WeatherLogResponse implements Serializable {
 
-//    private String cityName;
-//
-//    private Long cityId;
-//
-//    private String wDate;
-//
-//    private String logDate;
-//
-//    private String wString;
-//
-//    private Double tempK;
-//
-//    private Double tempC;
-//
-//    private Double temmpF;
-//
-//    private String wMainType;
-//
-//    private String wIcon;
-//
-//    private Double pressure;
-//
-//    private Double humidity;
-//
-//    private Double windSpeed;
+    private static final long serialVersionUID = 1L;
 
     private List<Weather> weather;
     private MainType main;
