@@ -1,5 +1,6 @@
 package com.oddle.app.weatherApp.service.impl;
 
+import com.oddle.app.weatherApp.exception.ValidationException;
 import com.oddle.app.weatherApp.service.DateValidator;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +21,7 @@ public class DateValidatorImpl implements DateValidator {
         try {
             sdf.parse(dateString);
         } catch (ParseException e) {
-            return false;
+            throw new ValidationException("Date is not in support format: yyyy-mm-dd");
         }
         return true;
     }

@@ -3,8 +3,9 @@ package com.oddle.app.weatherApp.service.impl;
 import com.google.gson.Gson;
 import com.oddle.app.weatherApp.dao.LogRepository;
 import com.oddle.app.weatherApp.entity.WeatherLogEntity;
-import com.oddle.app.weatherApp.exception.GeneralException;
+import com.oddle.app.weatherApp.exception.IntegrationException;
 import com.oddle.app.weatherApp.exception.LogNotFoundException;
+import com.oddle.app.weatherApp.exception.ValidationException;
 import com.oddle.app.weatherApp.model.WeatherLog;
 import com.oddle.app.weatherApp.model.WeatherLogResponse;
 import com.oddle.app.weatherApp.service.DateValidator;
@@ -16,6 +17,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -83,7 +85,7 @@ public class WeatherLogServiceImpl implements WeatherLogService {
     public void deleteSavedLog(Long id) {
         if (getLogById(id) != null) {
             logRepository.deleteById(id);
-        } else throw new LogNotFoundException("id: " + id + " does not exist");
+        }
     }
 
     public WeatherLog updateSavedLog(Long id, WeatherLog weatherLog) {
@@ -91,16 +93,14 @@ public class WeatherLogServiceImpl implements WeatherLogService {
 
         long timeStampSeconds = instant.getEpochSecond();
         WeatherLog weatherLogById = getLogById(id);
-        if (weatherLogById != null) {
-            if (timeStampSeconds - weatherLogById.getWDate() >= ONE_DAY_IN_SEC) {
-                throw new GeneralException("Cannot edit log older than 1 day from: " + weatherLogById.getLogDate() + " to current time: " + convertMiliToDateTime(timeStampSeconds));
-            }
-            WeatherLogEntity weatherLogEntity = fromModel(weatherLog);
-            weatherLogEntity.setId(id);
-            logRepository.save(weatherLogEntity);
-            return fromEntity(logRepository.findById(id).get());
+
+        if (timeStampSeconds - weatherLogById.getWDate() >= ONE_DAY_IN_SEC) {
+            throw new ValidationException("Cannot edit log older than 1 day from: " + weatherLogById.getLogDate() + " to current time: " + convertMiliToDateTime(timeStampSeconds));
         }
-        return null;
+        WeatherLogEntity weatherLogEntity = fromModel(weatherLog);
+        weatherLogEntity.setId(id);
+        logRepository.save(weatherLogEntity);
+        return fromEntity(logRepository.findById(id).get());
     }
 
     public WeatherLog getLogById(Long id) {
@@ -108,7 +108,7 @@ public class WeatherLogServiceImpl implements WeatherLogService {
         if (weatherLogEntity.isPresent()) {
             return fromEntity(weatherLogEntity.get());
         }
-        return null;
+        throw new LogNotFoundException("log with id: " + id + " does not exist!");
     }
 
     public List<WeatherLog> retrieveLogs(String cityName, String date, Integer pageOrder, Integer count) {
@@ -124,13 +124,12 @@ public class WeatherLogServiceImpl implements WeatherLogService {
             result = logRepository.findAll(pageable).stream()
                     .map(weatherLogEntity -> fromEntity(weatherLogEntity)).collect(Collectors.toList());
         } else if (cityName != null && date != null) {
-            if (!dateValidator.isValid(date))
-                throw new GeneralException("Date is invalid format. Please use yyyy-mm-dd format.");
-            result = logRepository.findAllByCityNameAndLogDate(cityName, date, pageable).stream()
-                    .map(weatherLogEntity -> fromEntity(weatherLogEntity)).collect(Collectors.toList());
+
+            if (dateValidator.isValid(date)) {
+                result = logRepository.findAllByCityNameAndLogDate(cityName, date, pageable).stream()
+                        .map(weatherLogEntity -> fromEntity(weatherLogEntity)).collect(Collectors.toList());
+            }
         }
-
-
         return result;
     }
 
@@ -138,12 +137,14 @@ public class WeatherLogServiceImpl implements WeatherLogService {
 
         Map<String, String> param = new HashMap<>();
         param.put("q", name);
-        String response = restService.callRestToGetLog(param);
-        WeatherLogEntity weatherLogEntity = saveLatestLog(response);
-        return fromEntity(weatherLogEntity);
-
+        try {
+            String response = restService.callRestToGetLog(param);
+            WeatherLogEntity weatherLogEntity = saveLatestLog(response);
+            return fromEntity(weatherLogEntity);
+        } catch (HttpClientErrorException e) {
+            throw new IntegrationException("Cannot get call api to get log of city: " + name +" .Detail: "+ e.getResponseBodyAsString());
+        }
     }
-
 
 
     public WeatherLogEntity saveLatestLog(String input) {

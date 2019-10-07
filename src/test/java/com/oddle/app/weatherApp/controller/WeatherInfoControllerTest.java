@@ -1,9 +1,14 @@
 package com.oddle.app.weatherApp.controller;
 
+import com.oddle.app.weatherApp.exception.IntegrationException;
 import com.oddle.app.weatherApp.model.WeatherLog;
+import com.oddle.app.weatherApp.service.RestService;
 import com.oddle.app.weatherApp.service.WeatherLogService;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -36,6 +41,9 @@ public class WeatherInfoControllerTest {
     @MockBean
     private RestTemplate restTemplate;
 
+    @MockBean
+    private RestService restService;
+
     @Test
     public void givenLogOfHaNoi_whenFetchLogByCityName_thenReturnJson()
             throws Exception {
@@ -50,28 +58,6 @@ public class WeatherInfoControllerTest {
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.cityName", is(weatherLog.getCityName())));
-    }
-
-    @Test
-    public void givenWrongCityName_whenFetchLogByCityName_thenReturnNotFound()
-            throws Exception {
-
-        String s = "{\n" +
-                "    \"cod\": \"404\",\n" +
-                "    \"message\": \"city not found\"\n" +
-                "}";
-        byte[] bytes = s.getBytes();
-
-        HttpClientErrorException httpClientErrorException = new HttpClientErrorException(HttpStatus.NOT_FOUND, null, bytes, null);
-
-        given(service.fetchLog("Hanoi123")).willThrow(httpClientErrorException);
-
-        MvcResult mvcResult = mvc.perform(get("/fetch-log").param("cityName", "Hanoi123").accept(MediaType.APPLICATION_JSON_VALUE)).andReturn();
-        assertEquals(404, mvcResult.getResponse().getStatus());
-        String contentAsString = mvcResult.getResponse().getContentAsString();
-        assertTrue(contentAsString.contains("city not found"));
-        assertTrue(contentAsString.contains("Cannot get city: Hanoi123."));
-
     }
 
 }
