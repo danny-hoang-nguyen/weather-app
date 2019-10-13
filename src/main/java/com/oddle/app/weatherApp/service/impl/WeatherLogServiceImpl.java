@@ -3,12 +3,8 @@ package com.oddle.app.weatherApp.service.impl;
 import com.google.gson.Gson;
 import com.oddle.app.weatherApp.dao.LogRepository;
 import com.oddle.app.weatherApp.entity.WeatherLogEntity;
-import com.oddle.app.weatherApp.exception.IntegrationException;
-import com.oddle.app.weatherApp.exception.LogNotFoundException;
-import com.oddle.app.weatherApp.exception.ValidationException;
 import com.oddle.app.weatherApp.model.WeatherLog;
 import com.oddle.app.weatherApp.model.WeatherLogResponse;
-import com.oddle.app.weatherApp.service.Validator;
 import com.oddle.app.weatherApp.service.RestService;
 import com.oddle.app.weatherApp.service.WeatherLogService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -79,9 +75,6 @@ public class WeatherLogServiceImpl implements WeatherLogService {
     @Autowired
     private LogRepository logRepository;
 
-//    @Autowired
-//    private Validator dateValidator;
-
     @Autowired
     private RestService restService;
 
@@ -98,7 +91,7 @@ public class WeatherLogServiceImpl implements WeatherLogService {
         WeatherLog weatherLogById = getLogById(id);
 
         if (timeStampSeconds - weatherLogById.getWDate() >= ONE_DAY_IN_SEC) {
-            throw new ValidationException("Cannot edit log older than 1 day from: " + weatherLogById.getLogDate() + " to current time: " + convertMiliToDateTime(timeStampSeconds));
+//            throw new ValidationException("Cannot edit log older than 1 day from: " + weatherLogById.getLogDate() + " to current time: " + convertMiliToDateTime(timeStampSeconds));
         }
         WeatherLogEntity weatherLogEntity = fromModel(weatherLog);
         weatherLogEntity.setId(id);
@@ -107,28 +100,15 @@ public class WeatherLogServiceImpl implements WeatherLogService {
     }
 
     public WeatherLog getLogById(Long id) {
-        Optional<WeatherLogEntity> weatherLogEntity = logRepository.findById(id);
-        if (weatherLogEntity.isPresent()) {
-            return fromEntity(weatherLogEntity.get());
-        }
-        throw new LogNotFoundException("log with id: " + id + " does not exist!");
+
+            return fromEntity(logRepository.findById(id).get());
+
+//        throw new LogNotFoundException("log with id: " + id + " does not exist!");
+
     }
 
     public List<WeatherLog> retrieveLogs(String cityName, String date, Integer pageOrder, Integer count) {
         Pageable pageable;
-        Validator dateValidator = new Validator() {
-            @Override
-            public boolean isValid(String dateString) {
-                DateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-                sdf.setLenient(false);
-                try {
-                    sdf.parse(dateString);
-                } catch (ParseException e) {
-                    throw new ValidationException("Date is not in support format: yyyy-mm-dd");
-                }
-                return true;
-            }
-        };
 
         List<WeatherLog> result = Collections.emptyList();
         if (pageOrder != null && count != null) {
@@ -141,8 +121,7 @@ public class WeatherLogServiceImpl implements WeatherLogService {
             result = logRepository.findAll(pageable).stream()
                     .map(getWeatherLogEntityWeatherLogFunction()).collect(Collectors.toList());
         } else if (cityName != null && date != null) {
-
-            if (dateValidator.isValid(date)) {
+            if (dateValidationPredicate().test(date)) {
                 result = logRepository.findAllByCityNameAndLogDate(cityName, date, pageable).stream()
                         .map(getWeatherLogEntityWeatherLogFunction()).collect(Collectors.toList());
             }
@@ -154,30 +133,28 @@ public class WeatherLogServiceImpl implements WeatherLogService {
         return weatherLogEntity -> fromEntity(weatherLogEntity);
     }
 
-    private Predicate<String> dateValidationPredicate(){
-       return inputDate -> {
-           DateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-           sdf.setLenient(false);
-           try {
-               sdf.parse(inputDate);
-           } catch (ParseException e) {
-              return false;
-           }
-           return true;
-       };
+    private Predicate<String> dateValidationPredicate() {
+        return inputDate -> {
+            DateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            sdf.setLenient(false);
+            try {
+                sdf.parse(inputDate);
+            } catch (ParseException e) {
+//                throw new ValidationException("Date is not in support format: yyyy-mm-dd");
+            }
+            return true;
+        };
     }
 
     public WeatherLog fetchLog(String name) {
 
         Map<String, String> param = new HashMap<>();
         param.put("q", name);
-        try {
+
             String response = restService.callRestToGetLog(param);
             WeatherLogEntity weatherLogEntity = saveLatestLog(response);
             return fromEntity(weatherLogEntity);
-        } catch (HttpClientErrorException e) {
-            throw new IntegrationException("Cannot get call api to get log of city: " + name +" .Detail: "+ e.getResponseBodyAsString());
-        }
+
     }
 
 

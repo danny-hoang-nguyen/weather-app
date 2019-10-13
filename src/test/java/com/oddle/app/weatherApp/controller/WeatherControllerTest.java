@@ -1,7 +1,5 @@
 package com.oddle.app.weatherApp.controller;
 
-import com.oddle.app.weatherApp.exception.IntegrationException;
-import com.oddle.app.weatherApp.exception.ValidationException;
 import com.oddle.app.weatherApp.model.WeatherLog;
 import com.oddle.app.weatherApp.service.AbstractTest;
 import com.oddle.app.weatherApp.service.WeatherLogService;
@@ -42,17 +40,17 @@ public class WeatherControllerTest extends AbstractTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.cityName").value("Gotham"));
     }
 
-    @Test
-    public void givenWrongCityName_whenFetchLogByCityName_thenReturnNotFound() throws Exception {
-
-        given(service.fetchLog(Mockito.anyString())).willThrow(new IntegrationException("Cannot get call api to get log of city: Gotham123"));
-        String uri = "/fetch-log";
-        MvcResult mvcResult = mvc.perform(get(uri).param("cityName", "Gotham123")
-                .accept(MediaType.APPLICATION_JSON_VALUE)).andReturn();
-        mvcResult.getResolvedException().getMessage().contains("Cannot get call api to get log of city: Gotham123");
-        assertTrue(mvcResult.getResponse().getStatus() == 500);
-
-    }
+//    @Test
+//    public void givenWrongCityName_whenFetchLogByCityName_thenReturnNotFound() throws Exception {
+//
+//        given(service.fetchLog(Mockito.anyString())).willThrow(new IntegrationException("Cannot get call api to get log of city: Gotham123"));
+//        String uri = "/fetch-log";
+//        MvcResult mvcResult = mvc.perform(get(uri).param("cityName", "Gotham123")
+//                .accept(MediaType.APPLICATION_JSON_VALUE)).andReturn();
+//        mvcResult.getResolvedException().getMessage().contains("Cannot get call api to get log of city: Gotham123");
+//        assertTrue(mvcResult.getResponse().getStatus() == 500);
+//
+//    }
 
     @Test
     public void givenNoParam_whenRetrievingLogs_thenReturn() throws Exception {
