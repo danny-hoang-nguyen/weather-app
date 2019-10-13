@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 
 import java.text.DateFormat;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.*;
@@ -76,8 +77,8 @@ public class WeatherLogServiceImpl implements WeatherLogService {
     @Autowired
     private LogRepository logRepository;
 
-    @Autowired
-    private DateValidator dateValidator;
+//    @Autowired
+//    private DateValidator dateValidator;
 
     @Autowired
     private RestService restService;
@@ -113,6 +114,7 @@ public class WeatherLogServiceImpl implements WeatherLogService {
 
     public List<WeatherLog> retrieveLogs(String cityName, String date, Integer pageOrder, Integer count) {
         Pageable pageable;
+        DateValidator dateValidator = getDateValidator();
         List<WeatherLog> result = Collections.emptyList();
         if (pageOrder != null && count != null) {
             pageable = PageRequest.of(pageOrder, count, Sort.by("wDate").descending());
@@ -131,6 +133,19 @@ public class WeatherLogServiceImpl implements WeatherLogService {
             }
         }
         return result;
+    }
+
+    private DateValidator getDateValidator() {
+        return dateString -> {
+                DateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                sdf.setLenient(false);
+                try {
+                    sdf.parse(dateString);
+                } catch (ParseException e) {
+                    throw new ValidationException("Date is not in support format: yyyy-mm-dd");
+                }
+                return true;
+            };
     }
 
     public WeatherLog fetchLog(String name) {

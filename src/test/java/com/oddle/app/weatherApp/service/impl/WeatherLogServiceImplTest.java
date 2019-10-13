@@ -1,54 +1,29 @@
 package com.oddle.app.weatherApp.service.impl;
 
-import com.oddle.app.weatherApp.dao.LogRepository;
 import com.oddle.app.weatherApp.exception.IntegrationException;
-import com.oddle.app.weatherApp.service.DateValidator;
 import com.oddle.app.weatherApp.service.RestService;
 import com.oddle.app.weatherApp.service.WeatherLogService;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.annotation.Bean;
+import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.http.HttpStatus;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestTemplate;
 
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.when;
 
-@RunWith(SpringRunner.class)
+@RunWith(MockitoJUnitRunner.class)
 public class WeatherLogServiceImplTest {
 
-    @TestConfiguration
-    static class EmployeeServiceImplTestContextConfiguration {
+    @InjectMocks
+    WeatherLogService service = new WeatherLogServiceImpl();
 
-        @Bean
-        public WeatherLogService logService() {
-            return new WeatherLogServiceImpl();
-        }
-    }
-
-    @Autowired
-    WeatherLogService service;
-
-    @MockBean
+    @Mock
     RestService restService;
-
-    @MockBean
-    RestTemplate restTemplate;
-
-    @MockBean
-    LogRepository logRepository;
-
-    @MockBean
-    DateValidator dateValidator;
 
     @Rule
     public ExpectedException exceptionRule = ExpectedException.none();
