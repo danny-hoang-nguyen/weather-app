@@ -8,7 +8,7 @@ import com.oddle.app.weatherApp.exception.LogNotFoundException;
 import com.oddle.app.weatherApp.exception.ValidationException;
 import com.oddle.app.weatherApp.model.WeatherLog;
 import com.oddle.app.weatherApp.model.WeatherLogResponse;
-import com.oddle.app.weatherApp.service.DateValidator;
+import com.oddle.app.weatherApp.service.Validator;
 import com.oddle.app.weatherApp.service.RestService;
 import com.oddle.app.weatherApp.service.WeatherLogService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +24,8 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.*;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @Service
@@ -78,7 +80,7 @@ public class WeatherLogServiceImpl implements WeatherLogService {
     private LogRepository logRepository;
 
 //    @Autowired
-//    private DateValidator dateValidator;
+//    private Validator dateValidator;
 
     @Autowired
     private RestService restService;
@@ -114,7 +116,20 @@ public class WeatherLogServiceImpl implements WeatherLogService {
 
     public List<WeatherLog> retrieveLogs(String cityName, String date, Integer pageOrder, Integer count) {
         Pageable pageable;
-        DateValidator dateValidator = getDateValidator();
+        Validator dateValidator = new Validator() {
+            @Override
+            public boolean isValid(String dateString) {
+                DateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                sdf.setLenient(false);
+                try {
+                    sdf.parse(dateString);
+                } catch (ParseException e) {
+                    throw new ValidationException("Date is not in support format: yyyy-mm-dd");
+                }
+                return true;
+            }
+        };
+
         List<WeatherLog> result = Collections.emptyList();
         if (pageOrder != null && count != null) {
             pageable = PageRequest.of(pageOrder, count, Sort.by("wDate").descending());
@@ -124,28 +139,32 @@ public class WeatherLogServiceImpl implements WeatherLogService {
 
         if (cityName == null && date == null) {
             result = logRepository.findAll(pageable).stream()
-                    .map(weatherLogEntity -> fromEntity(weatherLogEntity)).collect(Collectors.toList());
+                    .map(getWeatherLogEntityWeatherLogFunction()).collect(Collectors.toList());
         } else if (cityName != null && date != null) {
 
             if (dateValidator.isValid(date)) {
                 result = logRepository.findAllByCityNameAndLogDate(cityName, date, pageable).stream()
-                        .map(weatherLogEntity -> fromEntity(weatherLogEntity)).collect(Collectors.toList());
+                        .map(getWeatherLogEntityWeatherLogFunction()).collect(Collectors.toList());
             }
         }
         return result;
     }
 
-    private DateValidator getDateValidator() {
-        return dateString -> {
-                DateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-                sdf.setLenient(false);
-                try {
-                    sdf.parse(dateString);
-                } catch (ParseException e) {
-                    throw new ValidationException("Date is not in support format: yyyy-mm-dd");
-                }
-                return true;
-            };
+    private Function<WeatherLogEntity, WeatherLog> getWeatherLogEntityWeatherLogFunction() {
+        return weatherLogEntity -> fromEntity(weatherLogEntity);
+    }
+
+    private Predicate<String> dateValidationPredicate(){
+       return inputDate -> {
+           DateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+           sdf.setLenient(false);
+           try {
+               sdf.parse(inputDate);
+           } catch (ParseException e) {
+              return false;
+           }
+           return true;
+       };
     }
 
     public WeatherLog fetchLog(String name) {

@@ -10,10 +10,20 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 @ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
 public class IntegrationException extends RuntimeException {
     private static final long serialVersionUID = 1L;
-    private String message;
+
+    public IntegrationException() {
+        super();
+    }
+
+    public IntegrationException(String message, Throwable cause) {
+        super(message, cause);
+    }
 
     public IntegrationException(String message) {
-        super(message, null, false, false);
-        this.message = message;
+        super(message);
+    }
+
+    public IntegrationException(Throwable cause) {
+        super(cause);
     }
 }
